@@ -60,7 +60,7 @@ async def handle_connection(websocket):
                         #im = await loop.run_in_executor(executor, 
                                                         #apply_yolo_object_detection, im)
                         apply_yolo_object_detection(im)
-                        if response_messages:
+                        if response_messages and count > 0: #возможно убрать count
                             for msg in response_messages:
                                 await websocket.send(msg)
                         else:
