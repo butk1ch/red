@@ -14,6 +14,24 @@ executor = ThreadPoolExecutor()
 count_lock = asyncio.Lock()
 count = 0
 
+net = cv.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", 
+                                    "Resources/yolov4-tiny.weights")
+layers_names = net.getLayerNames()
+out_layers_indexes = net.getUnconnectedOutLayers()
+out_layers = [layers_names[index - 1] for index in out_layers_indexes]
+
+with open("Resources/coco.names.txt") as file:
+    classes = file.read().split("\n")
+
+    #video = url 
+look_for = input("What we are looking for: ").split(',')
+
+list_look_for = []
+for look in look_for:
+    list_look_for.append(look.strip())
+    
+classes_to_look_for = list_look_for
+
 
 def is_valid_image(image_bytes):
     imgnp = np.frombuffer(image_bytes, np.uint8)
@@ -24,7 +42,7 @@ async def handle_connection(websocket):
     global count
     loop = asyncio.get_event_loop()
     frame_count = 0
-    PROCESS_EVERY_NTH_FRAME = 2  # ← обрабатывать каждый n-й кадр
+    PROCESS_EVERY_NTH_FRAME = 3  # ← обрабатывать каждый n-й кадр
     while True:
         try:
             message = await websocket.recv()
@@ -38,19 +56,21 @@ async def handle_connection(websocket):
                         
                         imgnp=np.array(bytearray(message),dtype=np.uint8)
                         im = cv.imdecode(imgnp,-1)
-                        #processed_image, object_count = apply_yolo_object_detection(im)
+                        result_image, response_messages = apply_yolo_object_detection(im)
                         #im = await loop.run_in_executor(executor, 
                                                         #apply_yolo_object_detection, im)
                         apply_yolo_object_detection(im)
-                        if count > 0:
-                            await websocket.send("Detected")
+                        if response_messages:
+                            for msg in response_messages:
+                                await websocket.send(msg)
                         else:
-                            await websocket.send("Not Detected")
-                        cv.imshow("Video Capture", im)
+                            await websocket.send("Объекты не найдены")
+
+                        cv.imshow("Video Capture", result_image)
                         cv.waitKey(1)
                         # with open("image.jpg", "wb") as f:
                         #         f.write(message)
-            #await asyncio.sleep(0.001)
+            await asyncio.sleep(0.001)
             print()
             async with count_lock:
                 count = 0
@@ -88,25 +108,53 @@ def apply_yolo_object_detection(image):
             class_scores.append(float(confidence))
 
     if not boxes:
-        return image  # Быстрый выход
+        return image, [] # Быстрый выход
 
     indices = cv.dnn.NMSBoxes(boxes, class_scores, score_threshold=0.0, nms_threshold=0.4)
     if len(indices) == 0:
-        return image
+        return image, []
 
     result = image
     count = 0
+    messages = []
 
     for i in indices.flatten():
         class_id = class_indexes[i]
         if classes[class_id] in classes_to_look_for:
             count += 1
+            x, y, w, h = boxes[i]
             result = draw_object_bounding_box(result, class_id, boxes[i])
             
+            roi = image[max(y, 0):y + h, max(x, 0):x + w]
+            color_result = detect_color_red_or_green(roi)
+
+            if color_result and color_result not in messages:
+                messages.append(color_result)
         # if classes[class_index] not in classes_to_look_for:
         #     continue
 
-    return draw_object_count(result, count)
+    return draw_object_count(result, count), messages
+
+def detect_color_red_or_green(roi):
+    hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
+
+    # Маска красного (двойной диапазон)
+    red_mask1 = cv.inRange(hsv, (0, 70, 50), (10, 255, 255))
+    red_mask2 = cv.inRange(hsv, (160, 70, 50), (180, 255, 255))
+    red_mask = cv.bitwise_or(red_mask1, red_mask2)
+
+    # Маска зелёного
+    green_mask = cv.inRange(hsv, (40, 70, 50), (90, 255, 255))
+
+    red_pixels = cv.countNonZero(red_mask)
+    green_pixels = cv.countNonZero(green_mask)
+
+    if red_pixels > 50:
+        return "красный найден"
+    elif green_pixels > 50:
+        return "зеленый найден"
+    else:
+        return None
 
 def draw_object_bounding_box(image_to_process, index, box):
     x, y, w, h = box
@@ -139,6 +187,7 @@ def draw_object_count(image_to_process, objects_count):
 
     return final_image
 
+# TODO: оно есть, трогать не надо
 # def start_video_object_detection(video: str):
 #     logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
 #                         level=logging.DEBUG)
@@ -169,28 +218,28 @@ def draw_object_count(image_to_process, objects_count):
 #         except KeyboardInterrupt:
 #             pass
 
-if __name__ == '__main__':
-    #logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
-                        #level=logging.DEBUG)
-    net = cv.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", 
-                                    "Resources/yolov4-tiny.weights")
-    layers_names = net.getLayerNames()
-    out_layers_indexes = net.getUnconnectedOutLayers()
-    out_layers = [layers_names[index - 1] for index in out_layers_indexes]
+# if __name__ == '__main__':
+#     #logging.basicConfig(format='%(asctime)s - %(levelname)s: %(message)s',
+#                         #level=logging.DEBUG)
+#     net = cv.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", 
+#                                     "Resources/yolov4-tiny.weights")
+#     layers_names = net.getLayerNames()
+#     out_layers_indexes = net.getUnconnectedOutLayers()
+#     out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 
-    with open("Resources/coco.names.txt") as file:
-        classes = file.read().split("\n")
+#     with open("Resources/coco.names.txt") as file:
+#         classes = file.read().split("\n")
 
-    #video = url 
-    look_for = input("What we are looking for: ").split(',')
+#     #video = url 
+#     look_for = input("What we are looking for: ").split(',')
 
-    list_look_for = []
-    for look in look_for:
-        list_look_for.append(look.strip())
+#     list_look_for = []
+#     for look in look_for:
+#         list_look_for.append(look.strip())
     
-    classes_to_look_for = list_look_for
+#     classes_to_look_for = list_look_for
 
-    #start_video_object_detection(video)
+#     #start_video_object_detection(video)
 
 async def main():
     server = await websockets.serve(handle_connection, '0.0.0.0', 3001)
