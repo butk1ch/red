@@ -54,7 +54,7 @@ async def handle_connection(websocket):
             print()
             async with count_lock:
                 count = 0
-            print(count)
+            
         except websockets.exceptions.ConnectionClosed:
             break
 
