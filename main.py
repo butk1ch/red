@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, UnidentifiedImageError
 
 executor = ThreadPoolExecutor()
-
+#commit
 def is_valid_image(image_bytes):
     imgnp = np.frombuffer(image_bytes, np.uint8)
     image = cv.imdecode(imgnp, cv.IMREAD_COLOR)
