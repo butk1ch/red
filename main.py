@@ -11,6 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, UnidentifiedImageError
 
 executor = ThreadPoolExecutor()
+count = 0
 
 def is_valid_image(image_bytes):
     imgnp = np.frombuffer(image_bytes, np.uint8)
@@ -34,9 +35,14 @@ async def handle_connection(websocket):
                         
                         imgnp=np.array(bytearray(message),dtype=np.uint8)
                         im = cv.imdecode(imgnp,-1)
-
-                        im = await loop.run_in_executor(executor, 
-                                                        apply_yolo_object_detection, im)
+                        #processed_image, object_count = apply_yolo_object_detection(im)
+                        #im = await loop.run_in_executor(executor, 
+                                                        #apply_yolo_object_detection, im)
+                        apply_yolo_object_detection(im)
+                        if count > 0:
+                            await websocket.send("Detected")
+                        else:
+                            await websocket.send("Not Detected")
                         cv.imshow("Video Capture", im)
                         cv.waitKey(1)
                         # with open("image.jpg", "wb") as f:
@@ -47,6 +53,7 @@ async def handle_connection(websocket):
             break
 
 def apply_yolo_object_detection(image):
+    global count
     height, width = image.shape[:2]
 
     blob = cv.dnn.blobFromImage(image, 1 / 255.0, (320, 320), swapRB=True, crop=False)
@@ -89,8 +96,9 @@ def apply_yolo_object_detection(image):
         if classes[class_id] in classes_to_look_for:
             count += 1
             result = draw_object_bounding_box(result, class_id, boxes[i])
-        if classes[class_index] not in classes_to_look_for:
-            continue
+            
+        # if classes[class_index] not in classes_to_look_for:
+        #     continue
 
     return draw_object_count(result, count)
 
