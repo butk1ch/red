@@ -22,8 +22,7 @@ out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 
 with open("Resources/coco.names.txt") as file:
     classes = file.read().split("\n")
-
-    #video = url 
+    
 look_for = input("What we are looking for: ").split(',')
 
 list_look_for = []
