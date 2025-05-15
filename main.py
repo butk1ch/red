@@ -11,7 +11,9 @@ from concurrent.futures import ThreadPoolExecutor
 from PIL import Image, UnidentifiedImageError
 
 executor = ThreadPoolExecutor()
+count_lock = asyncio.Lock()
 count = 0
+
 
 def is_valid_image(image_bytes):
     imgnp = np.frombuffer(image_bytes, np.uint8)
@@ -19,6 +21,7 @@ def is_valid_image(image_bytes):
     return image is not None
 
 async def handle_connection(websocket):
+    global count
     loop = asyncio.get_event_loop()
     frame_count = 0
     PROCESS_EVERY_NTH_FRAME = 2  # ← обрабатывать каждый n-й кадр
@@ -49,6 +52,9 @@ async def handle_connection(websocket):
                         #         f.write(message)
             #await asyncio.sleep(0.001)
             print()
+            async with count_lock:
+                count = 0
+            print(count)
         except websockets.exceptions.ConnectionClosed:
             break
 
