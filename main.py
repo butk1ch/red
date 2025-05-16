@@ -5,7 +5,7 @@ from io import BytesIO
 import cv2 as cv
 import numpy as np
 import logging
-from art import tprint
+
 from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image, UnidentifiedImageError
