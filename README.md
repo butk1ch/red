@@ -4,6 +4,7 @@ Raspberry pi server with yolov4 for esp32 camera detection
 based on https://github.com/Neumi/esp32_camera_webstream/tree/main
 
 
-![doc_2025-05-17_01-47-19](https://github.com/user-attachments/assets/97f2039c-e9bb-496d-a052-549490091765)
-![doc_2025-05-17_01-47-19](https://github.com/user-attachments/assets/97f2039c-e9bb-496d-a052-549490091765)
-![doc_2025-05-17_01-47-19](https://github.com/user-attachments/assets/97f2039c-e9bb-496d-a052-549490091765)
+
+![doc_2025-05-17_02-16-18](https://github.com/user-attachments/assets/b7b26932-5a56-4021-af1c-7440759dbed7)
+![doc_2025-05-17_02-16-18](https://github.com/user-attachments/assets/cd5c43a2-dc5e-426e-a143-46db5e761a3d)
+![doc_2025-05-17_02-16-18](https://github.com/user-attachments/assets/f65dbd52-8450-4cb9-8249-3d3e8704a74c)
