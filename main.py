@@ -145,10 +145,21 @@ def detect_color_red_or_green(roi):
     # Маска зелёного
     green_mask = cv.inRange(hsv, (40, 70, 50), (90, 255, 255))
 
+    # Подсчёт количества пикселей каждого цвета
     red_pixels = cv.countNonZero(red_mask)
     green_pixels = cv.countNonZero(green_mask)
 
-    if red_pixels > 50:
+    # Определение средней яркости каждого цвета
+    red_brightness = np.mean(hsv[:, :, 2][red_mask > 0]) if red_pixels > 0 else 0
+    green_brightness = np.mean(hsv[:, :, 2][green_mask > 0]) if green_pixels > 0 else 0
+
+    if red_pixels > 50 and green_pixels > 50:
+        # Если оба цвета есть, но красный ярче - выбираем красный
+        if red_brightness > green_brightness:
+            return "красный найден"
+        else:
+            return "зеленый найден"
+    elif red_pixels > 50:
         return "красный найден"
     elif green_pixels > 50:
         return "зеленый найден"
