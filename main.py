@@ -23,7 +23,8 @@ out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 with open("Resources/coco.names.txt") as file:
     classes = file.read().split("\n")
     
-look_for = input("What we are looking for: ").split(',')
+#look_for = input("What we are looking for: ").split(',')
+look_for = "traffic light"
 
 list_look_for = []
 for look in look_for:
@@ -63,7 +64,7 @@ async def handle_connection(websocket):
                             for msg in response_messages:
                                 await websocket.send(msg)
                         else:
-                            await websocket.send("Объекты не найдены")
+                            await websocket.send("Not found")
 
                         cv.imshow("Video Capture", result_image)
                         cv.waitKey(1)
@@ -179,13 +180,13 @@ def detect_color_red_or_green(roi):
     if red_pixels > 50 and green_pixels > 50:
         # Если оба цвета есть, но красный ярче - выбираем красный
         if red_brightness > green_brightness:
-            return "красный найден"
+            return "found red"
         else:
-            return "зеленый найден"
+            return "found green"
     elif red_pixels > 50:
-        return "красный найден"
+        return "found red"
     elif green_pixels > 50:
-        return "зеленый найден"
+        return "found green"
     else:
         return None
 
