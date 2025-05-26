@@ -78,29 +78,41 @@ async def handle_connection(websocket):
         except websockets.exceptions.ConnectionClosed:
             break
 
-import cv2 as cv
-import numpy as np
-
 def find_black_rectangle(image):
-    """Функция для поиска черного прямоугольника в изображении"""
+    """Функция для поиска черного прямоугольника в изображении с улучшенной фильтрацией"""
     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)  # Преобразование в градации серого
-    _, thresh = cv.threshold(gray, 10, 255, cv.THRESH_BINARY_INV)  # Применение пороговой обработки
-    contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)  # Поиск контуров
     
+    # Увеличенное пороговое значение для исключения слабых затемнений
+    _, thresh = cv.threshold(gray, 30, 255, cv.THRESH_BINARY_INV)
+
+    # Морфологическая обработка для устранения мелких шумов
+    kernel = np.ones((5, 5), np.uint8)
+    thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
+
+    contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+
     black_boxes = []
     for contour in contours:
         x, y, w, h = cv.boundingRect(contour)
-        if w * h > 500:  # Фильтрация по размеру
-            black_boxes.append((x, y, w, h))
-    
+
+        # Проверка размеров и соотношения сторон
+        aspect_ratio = w / h
+        if 0.8 < aspect_ratio < 1.2 and w * h > 500:
+
+            # Проверка средней интенсивности внутри контура
+            roi = gray[y:y+h, x:x+w]
+            mean_intensity = np.mean(roi)
+            if mean_intensity < 50:  # Уточнение порога черного цвета
+                black_boxes.append((x, y, w, h))
+
     return black_boxes
 #
 def apply_yolo_object_detection(image):
-    """Основная функция с добавлением поиска черного прямоугольника"""
+    """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
 
-    black_boxes = find_black_rectangle(image)  # Поиск черного прямоугольника
+    black_boxes = find_black_rectangle(image)  # Улучшенный поиск черного прямоугольника
 
     blob = cv.dnn.blobFromImage(image, 1 / 255.0, (320, 320), swapRB=True, crop=False)
     net.setInput(blob)
@@ -156,6 +168,7 @@ def apply_yolo_object_detection(image):
         cv.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     return draw_object_count(result, count), messages
+
 
 
 def detect_color_red_or_green(roi):
