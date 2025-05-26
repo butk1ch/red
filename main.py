@@ -94,7 +94,7 @@ def find_black_rectangle(image):
             black_boxes.append((x, y, w, h))
     
     return black_boxes
-
+#
 def apply_yolo_object_detection(image):
     """Основная функция с добавлением поиска черного прямоугольника"""
     global count
