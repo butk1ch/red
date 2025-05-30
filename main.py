@@ -23,8 +23,8 @@ out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 with open("Resources/coco.names.txt") as file:
     classes = file.read().split("\n")
     
-#look_for = input("What we are looking for: ").split(',')
-look_for = "traffic light"
+look_for = input("What we are looking for: ").split(',')
+#look_for = "traffic light".split(',')
 
 list_look_for = []
 for look in look_for:
@@ -78,41 +78,41 @@ async def handle_connection(websocket):
         except websockets.exceptions.ConnectionClosed:
             break
 
-def find_black_rectangle(image):
-    """Функция для поиска черного прямоугольника в изображении с улучшенной фильтрацией"""
-    gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)  # Преобразование в градации серого
+# def find_black_rectangle(image):
+#     """Функция для поиска черного прямоугольника в изображении с улучшенной фильтрацией"""
+#     gray = cv.cvtColor(image, cv.COLOR_BGR2GRAY)  # Преобразование в градации серого
     
-    # Увеличенное пороговое значение для исключения слабых затемнений
-    _, thresh = cv.threshold(gray, 30, 255, cv.THRESH_BINARY_INV)
+#     # Увеличенное пороговое значение для исключения слабых затемнений
+#     _, thresh = cv.threshold(gray, 30, 255, cv.THRESH_BINARY_INV)
 
-    # Морфологическая обработка для устранения мелких шумов
-    kernel = np.ones((5, 5), np.uint8)
-    thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
+#     # Морфологическая обработка для устранения мелких шумов
+#     kernel = np.ones((5, 5), np.uint8)
+#     thresh = cv.morphologyEx(thresh, cv.MORPH_CLOSE, kernel)
 
-    contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
+#     contours, _ = cv.findContours(thresh, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE)
 
-    black_boxes = []
-    for contour in contours:
-        x, y, w, h = cv.boundingRect(contour)
+#     black_boxes = []
+#     for contour in contours:
+#         x, y, w, h = cv.boundingRect(contour)
 
-        # Проверка размеров и соотношения сторон
-        aspect_ratio = w / h
-        if 0.8 < aspect_ratio < 1.2 and w * h > 500:
+#         # Проверка размеров и соотношения сторон
+#         aspect_ratio = w / h
+#         if 0.8 < aspect_ratio < 1.2 and w * h > 500:
 
-            # Проверка средней интенсивности внутри контура
-            roi = gray[y:y+h, x:x+w]
-            mean_intensity = np.mean(roi)
-            if mean_intensity < 50:  # Уточнение порога черного цвета
-                black_boxes.append((x, y, w, h))
+#             # Проверка средней интенсивности внутри контура
+#             roi = gray[y:y+h, x:x+w]
+#             mean_intensity = np.mean(roi)
+#             if mean_intensity < 50:  # Уточнение порога черного цвета
+#                 black_boxes.append((x, y, w, h))
 
-    return black_boxes
-#
+#     return black_boxes
+
 def apply_yolo_object_detection(image):
     """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
 
-    black_boxes = find_black_rectangle(image)  # Улучшенный поиск черного прямоугольника
+    # black_boxes = find_black_rectangle(image)  # Улучшенный поиск черного прямоугольника
 
     blob = cv.dnn.blobFromImage(image, 1 / 255.0, (320, 320), swapRB=True, crop=False)
     net.setInput(blob)
@@ -164,8 +164,8 @@ def apply_yolo_object_detection(image):
                 messages.append(color_result)
 
     # Отрисовка найденных черных прямоугольников
-    for x, y, w, h in black_boxes:
-        cv.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
+    # for x, y, w, h in black_boxes:
+    #     cv.rectangle(result, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
     return draw_object_count(result, count), messages
 
@@ -190,15 +190,15 @@ def detect_color_red_or_green(roi):
     red_brightness = np.mean(hsv[:, :, 2][red_mask > 0]) if red_pixels > 0 else 0
     green_brightness = np.mean(hsv[:, :, 2][green_mask > 0]) if green_pixels > 0 else 0
 
-    if red_pixels > 50 and green_pixels > 50:
+    if red_pixels > 1 and green_pixels > 1:
         # Если оба цвета есть, но красный ярче - выбираем красный
         if red_brightness > green_brightness:
             return "found red"
         else:
             return "found green"
-    elif red_pixels > 50:
+    elif red_pixels > 1:
         return "found red"
-    elif green_pixels > 50:
+    elif green_pixels > 1:
         return "found green"
     else:
         return None
