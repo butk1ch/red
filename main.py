@@ -60,7 +60,7 @@ async def handle_connection(websocket):
                         #im = await loop.run_in_executor(executor, 
                                                         #apply_yolo_object_detection, im)
                         apply_yolo_object_detection(im)
-                        if response_messages and count > 0: #возможно убрать count
+                        if response_messages: #возможно убрать count
                             for msg in response_messages:
                                 await websocket.send(msg)
                         else:
@@ -169,36 +169,29 @@ def apply_yolo_object_detection(image):
 
     return draw_object_count(result, count), messages
 
-
-
 def detect_color_red_or_green(roi):
+    # Применяем медианный фильтр для уменьшения шумов
+    roi = cv.medianBlur(roi, 5)
+
+    # Конвертируем изображение в HSV
     hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
 
-    # Маска красного (двойной диапазон)
-    red_mask1 = cv.inRange(hsv, (0, 70, 50), (10, 255, 255))
-    red_mask2 = cv.inRange(hsv, (160, 70, 50), (180, 255, 255))
+    # Маски для красного цвета (двойной диапазон)
+    red_mask1 = cv.inRange(hsv, (0, 60, 40), (15, 255, 255))
+    red_mask2 = cv.inRange(hsv, (160, 60, 40), (180, 255, 255))
     red_mask = cv.bitwise_or(red_mask1, red_mask2)
 
-    # Маска зелёного
-    green_mask = cv.inRange(hsv, (40, 70, 50), (90, 255, 255))
+    # Маска для зелёного цвета
+    green_mask = cv.inRange(hsv, (40, 60, 40), (90, 255, 255))
 
     # Подсчёт количества пикселей каждого цвета
     red_pixels = cv.countNonZero(red_mask)
     green_pixels = cv.countNonZero(green_mask)
 
-    # Определение средней яркости каждого цвета
-    red_brightness = np.mean(hsv[:, :, 2][red_mask > 0]) if red_pixels > 0 else 0
-    green_brightness = np.mean(hsv[:, :, 2][green_mask > 0]) if green_pixels > 0 else 0
-
-    if red_pixels > 1 and green_pixels > 1:
-        # Если оба цвета есть, но красный ярче - выбираем красный
-        if red_brightness > green_brightness:
-            return "found red"
-        else:
-            return "found green"
-    elif red_pixels > 1:
+    # Определение цвета на основе количества пикселей
+    if red_pixels > green_pixels:
         return "found red"
-    elif green_pixels > 1:
+    elif green_pixels > red_pixels:
         return "found green"
     else:
         return None
