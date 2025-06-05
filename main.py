@@ -60,7 +60,7 @@ async def handle_connection(websocket):
                         #im = await loop.run_in_executor(executor, 
                                                         #apply_yolo_object_detection, im)
                         apply_yolo_object_detection(im)
-                        if response_messages and count > 0: #возможно убрать count
+                        if response_messages: #возможно убрать count
                             for msg in response_messages:
                                 await websocket.send(msg)
                         else:
@@ -107,13 +107,13 @@ async def handle_connection(websocket):
 
 #     return black_boxes
 
-def apply_yolo_object_detection(image):
+def apply_yolo_object_detection(image, conf_threshold = 0.5):
     """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
 
     # black_boxes = find_black_rectangle(image)  # Улучшенный поиск черного прямоугольника
-
+    
     blob = cv.dnn.blobFromImage(image, 1 / 255.0, (320, 320), swapRB=True, crop=False)
     net.setInput(blob)
     outs = net.forward(out_layers)
@@ -127,7 +127,7 @@ def apply_yolo_object_detection(image):
         class_index = np.argmax(scores)
         confidence = scores[class_index]
 
-        if confidence > 0:
+        if confidence > conf_threshold:
             center_x = int(detection[0] * width)
             center_y = int(detection[1] * height)
             w = int(detection[2] * width)
@@ -142,7 +142,7 @@ def apply_yolo_object_detection(image):
     if not boxes:
         return image, [] 
 
-    indices = cv.dnn.NMSBoxes(boxes, class_scores, score_threshold=0.0, nms_threshold=0.4)
+    indices = cv.dnn.NMSBoxes(boxes, class_scores, score_threshold=conf_threshold, nms_threshold=0.4)
     if len(indices) == 0:
         return image, []
 
@@ -175,30 +175,23 @@ def detect_color_red_or_green(roi):
     hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
 
     # Маска красного (двойной диапазон)
-    red_mask1 = cv.inRange(hsv, (0, 70, 50), (10, 255, 255))
-    red_mask2 = cv.inRange(hsv, (160, 70, 50), (180, 255, 255))
+    lower_red1, upper_red1 = (0, 100, 100), (10, 255, 255)
+    lower_red2, upper_red2 = (160, 100, 100), (180, 255, 255)
+    red_mask1 = cv.inRange(hsv, lower_red1, upper_red1)
+    red_mask2 = cv.inRange(hsv, lower_red2, upper_red2)
     red_mask = cv.bitwise_or(red_mask1, red_mask2)
 
     # Маска зелёного
-    green_mask = cv.inRange(hsv, (40, 70, 50), (90, 255, 255))
+    lower_green, upper_green = (40, 100, 100), (90, 255, 255)
+    green_mask = cv.inRange(hsv, lower_green, upper_green)
 
-    # Подсчёт количества пикселей каждого цвета
+    # Подсчёт пикселей
     red_pixels = cv.countNonZero(red_mask)
     green_pixels = cv.countNonZero(green_mask)
 
-    # Определение средней яркости каждого цвета
-    red_brightness = np.mean(hsv[:, :, 2][red_mask > 0]) if red_pixels > 0 else 0
-    green_brightness = np.mean(hsv[:, :, 2][green_mask > 0]) if green_pixels > 0 else 0
-
-    if red_pixels > 1 and green_pixels > 1:
-        # Если оба цвета есть, но красный ярче - выбираем красный
-        if red_brightness > green_brightness:
-            return "found red"
-        else:
-            return "found green"
-    elif red_pixels > 1:
+    if red_pixels > green_pixels:
         return "found red"
-    elif green_pixels > 1:
+    elif green_pixels > red_pixels:
         return "found green"
     else:
         return None
