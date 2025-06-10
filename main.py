@@ -155,8 +155,12 @@ def apply_yolo_object_detection(image, conf_threshold = 0.2):
         if classes[class_id] in classes_to_look_for:
             count += 1
             x, y, w, h = boxes[i]
+            confidence = class_scores[i]
             result = draw_object_bounding_box(result, class_id, boxes[i])
             
+            text = f"{classes[class_id]}: {confidence:.2f}"
+            cv.putText(result, text, (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
             roi = image[max(y, 0):y + h, max(x, 0):x + w]
             color_result = detect_color_red_or_green(roi)
 
