@@ -23,8 +23,8 @@ out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 with open("Resources/coco.names.txt") as file:
     classes = file.read().split("\n")
     
-look_for = input("What we are looking for: ").split(',')
-#look_for = "traffic light".split(',')
+#look_for = input("What we are looking for: ").split(',')
+look_for = "traffic light".split(',')
 
 list_look_for = []
 for look in look_for:
@@ -107,13 +107,13 @@ async def handle_connection(websocket):
 
 #     return black_boxes
 
-def apply_yolo_object_detection(image):
+def apply_yolo_object_detection(image, conf_threshold = 0.2):
     """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
 
     # black_boxes = find_black_rectangle(image)  # Улучшенный поиск черного прямоугольника
-
+    
     blob = cv.dnn.blobFromImage(image, 1 / 255.0, (320, 320), swapRB=True, crop=False)
     net.setInput(blob)
     outs = net.forward(out_layers)
@@ -127,7 +127,7 @@ def apply_yolo_object_detection(image):
         class_index = np.argmax(scores)
         confidence = scores[class_index]
 
-        if confidence > 0:
+        if confidence > conf_threshold:
             center_x = int(detection[0] * width)
             center_y = int(detection[1] * height)
             w = int(detection[2] * width)
@@ -142,7 +142,7 @@ def apply_yolo_object_detection(image):
     if not boxes:
         return image, [] 
 
-    indices = cv.dnn.NMSBoxes(boxes, class_scores, score_threshold=0.0, nms_threshold=0.4)
+    indices = cv.dnn.NMSBoxes(boxes, class_scores, score_threshold=conf_threshold, nms_threshold=0.4)
     if len(indices) == 0:
         return image, []
 
@@ -155,8 +155,12 @@ def apply_yolo_object_detection(image):
         if classes[class_id] in classes_to_look_for:
             count += 1
             x, y, w, h = boxes[i]
+            confidence = class_scores[i]
             result = draw_object_bounding_box(result, class_id, boxes[i])
             
+            text = f"{classes[class_id]}: {confidence:.2f}"
+            cv.putText(result, text, (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
             roi = image[max(y, 0):y + h, max(x, 0):x + w]
             color_result = detect_color_red_or_green(roi)
 
@@ -169,26 +173,26 @@ def apply_yolo_object_detection(image):
 
     return draw_object_count(result, count), messages
 
-def detect_color_red_or_green(roi):
-    # Применяем медианный фильтр для уменьшения шумов
-    roi = cv.medianBlur(roi, 5)
 
-    # Конвертируем изображение в HSV
+
+def detect_color_red_or_green(roi):
     hsv = cv.cvtColor(roi, cv.COLOR_BGR2HSV)
 
-    # Маски для красного цвета (двойной диапазон)
-    red_mask1 = cv.inRange(hsv, (0, 60, 40), (15, 255, 255))
-    red_mask2 = cv.inRange(hsv, (160, 60, 40), (180, 255, 255))
+    # Маска красного (двойной диапазон)
+    lower_red1, upper_red1 = (0, 100, 100), (10, 255, 255)
+    lower_red2, upper_red2 = (160, 100, 100), (180, 255, 255)
+    red_mask1 = cv.inRange(hsv, lower_red1, upper_red1)
+    red_mask2 = cv.inRange(hsv, lower_red2, upper_red2)
     red_mask = cv.bitwise_or(red_mask1, red_mask2)
 
-    # Маска для зелёного цвета
-    green_mask = cv.inRange(hsv, (40, 60, 40), (90, 255, 255))
+    # Маска зелёного
+    lower_green, upper_green = (40, 100, 100), (90, 255, 255)
+    green_mask = cv.inRange(hsv, lower_green, upper_green)
 
-    # Подсчёт количества пикселей каждого цвета
+    # Подсчёт пикселей
     red_pixels = cv.countNonZero(red_mask)
     green_pixels = cv.countNonZero(green_mask)
 
-    # Определение цвета на основе количества пикселей
     if red_pixels > green_pixels:
         return "found red"
     elif green_pixels > red_pixels:
