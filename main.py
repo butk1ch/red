@@ -23,8 +23,8 @@ out_layers = [layers_names[index - 1] for index in out_layers_indexes]
 with open("Resources/coco.names.txt") as file:
     classes = file.read().split("\n")
     
-look_for = input("What we are looking for: ").split(',')
-#look_for = "traffic light".split(',')
+#look_for = input("What we are looking for: ").split(',')
+look_for = "traffic light".split(',')
 
 list_look_for = []
 for look in look_for:
@@ -107,7 +107,7 @@ async def handle_connection(websocket):
 
 #     return black_boxes
 
-def apply_yolo_object_detection(image, conf_threshold = 0.5):
+def apply_yolo_object_detection(image, conf_threshold = 0.2):
     """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
