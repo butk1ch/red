@@ -42,7 +42,7 @@ async def handle_connection(websocket):
     global count
     loop = asyncio.get_event_loop()
     frame_count = 0
-    PROCESS_EVERY_NTH_FRAME = 3  # ← обрабатывать каждый n-й кадр
+    PROCESS_EVERY_NTH_FRAME = 2  # ← обрабатывать каждый n-й кадр
     while True:
         try:
             message = await websocket.recv()
