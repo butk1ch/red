@@ -107,7 +107,7 @@ async def handle_connection(websocket):
 
 #     return black_boxes
 
-def apply_yolo_object_detection(image, conf_threshold = 0.2):
+def apply_yolo_object_detection(image, conf_threshold = 0.1):
     """Основная функция с улучшенным поиском черного прямоугольника"""
     global count
     height, width = image.shape[:2]
@@ -159,7 +159,8 @@ def apply_yolo_object_detection(image, conf_threshold = 0.2):
             result = draw_object_bounding_box(result, class_id, boxes[i])
             
             text = f"{classes[class_id]}: {confidence:.2f}"
-            cv.putText(result, text, (x, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+            (text_width, text_height), _ = cv.getTextSize(text, cv.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+            cv.putText(result, text, (x + w - text_width, y - 10), cv.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
             roi = image[max(y, 0):y + h, max(x, 0):x + w]
             color_result = detect_color_red_or_green(roi)
