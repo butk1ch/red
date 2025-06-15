@@ -190,14 +190,23 @@ def detect_color_red_or_green(roi):
     lower_green, upper_green = (40, 100, 100), (90, 255, 255)
     green_mask = cv.inRange(hsv, lower_green, upper_green)
 
+    lower_yellow, upper_yellow = (20, 100, 100), (30, 255, 255)
+    yellow_mask = cv.inRange(hsv, lower_yellow, upper_yellow)
+
     # Подсчёт пикселей
     red_pixels = cv.countNonZero(red_mask)
     green_pixels = cv.countNonZero(green_mask)
+    yellow_pixels = cv.countNonZero(yellow_mask)
 
-    if red_pixels > green_pixels:
+    # Определение доминирующего цвета
+    max_pixels = max(red_pixels, green_pixels, yellow_pixels)
+
+    if max_pixels == red_pixels:
         return "found red"
-    elif green_pixels > red_pixels:
+    elif max_pixels == green_pixels:
         return "found green"
+    elif max_pixels == yellow_pixels:
+        return "found yellow"
     else:
         return None
 
